@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>fetch</title>
+    </head>
+    <body>
+        <h1><a href="https://developer.mozilla.org/ja/docs/Web/API/Fetch_API/Using_Fetch" target="_blank">fetch</a></h1>
+        <h3>処理は「ソースを見る」、処理の結果は「検証」で確かめてください。</h3>
+        <p>
+            XMLHttpRequestの代替。<br>
+            簡単に非同期通信ができる。<br>
+            <br>
+            また、ServiceWorkersではXMLHttpRequestが使えないので、代わりにFetch APIを使う。という目的もある。
+        </p>
+        <p>
+            jQuery.ajaxと違う点。<br>
+            <ul>
+                <li>
+                    fetchの戻り値はpromiseオブジェクト<br>
+                    レスポンスがHTTP404や500などのステータスを返しても拒否しない。
+                </li>
+                <li>
+                    fetchはサーバーからcookieを送受信しない。<br>
+                    cookieで認証している場合などは、fetchのリクエストでは認証していないリクエストになる。
+                </li>
+            </ul>
+        </p>
+        <p>
+            PC, SP共にモダンブラウザでは対応済み。<br>
+            Android4.4系、Safariの10.1以前、IE（IE11含む）で使えない。<br>
+            <br>
+            polyfillを使えば以下は対応可能
+            <ul>
+                <li>Chrome</li>
+                <li>Firefox</li>
+                <li>Safari 6.1+</li>
+                <li>Internet Explorer 10+</li>
+            </ul>
+            <a href="https://github.com/github/fetch#browser-support" target="_blank">window.fetch polyfill</a><br>
+            <a href="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.4/fetch.min.js" target="_blank">window.fetch polyfillのcdn</a><br>
+            結局thenとかのpromiseも使うので、promiseのpolyfillも必要かも...
+        </p>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.4/fetch.min.js"></script>
+        <script>
+            // fetchが利用可能かどうか
+            if (fetch) {
+                console.log('fetchでやる');
+            } else {
+                console.log('XMLHttpRequestでやる');
+            }
+
+
+            // 一番簡単なfetchの例 --------------------------------
+            (function() {
+                // URLに非同期通信する
+                fetch('./request/data1.html')
+                    .then(function(response) {
+                        // 結果オブジェクトが帰ってくる
+                        console.log(' --- responseオブジェクトの中身 --- ')
+                        console.log(response);
+                        // 結果からjsonを取り出す為にjson()関数を使う。この処理により、promiseオブジェクトが解決されて次の処理に進む
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        // jsonを表示
+                        console.log(' --- responseのbodyの中身（json） --- ')
+                        console.log(data);
+                    });
+            })();
+
+
+            // オプションを渡す例 --------------------------------
+            (function() {
+                var options = {
+                    q: 1,
+                    a: 10,
+                };
+
+                // オプションを設定してリクエスト
+                fetch('./request/data1.html', {
+                    body: JSON.stringify(options), // headersのcontent-typeに合わせる
+                    cache: 'no-cache', // デフォルトはdefault, その他にno-cache, reload, force-cache, only-if-cached
+                    credentials: 'same-origin', // デフォルトはomit, その他にinclude, same-origin
+                    headers: { // HTTPリクエストヘッダを設定できます
+                        'user-agent': 'Moziila/4.0 MDN Example', // ユーザエージェントとか 
+                        'content-type': 'application/json' // Content-typeとか
+                    },
+                    method: 'POST', // デフォルトはGET, その他にPOST, PUT, DELETEなど
+                    mode: 'cors', // デフォルトはsame-origin, その他にno-cors, cors
+                    redirect: 'follow', // デフォルトはfollow, その他にmanual, error
+                    referrer: 'no-referrer', // デフォルトはclient, その他にno-referrer
+                })
+                .then(function(response) {
+                    return response.json();
+                });
+            })();
+
+            // ファイルをアップロードする例 --------------------------------
+            // <input type="file">が存在する前提
+            // (function() {
+            //     var formData = new FormData();
+            //     var fileField = document.querySelector('input[type="file"]');
+
+            //     formData.append('username', 'test-user');
+            //     formData.append('avatar', fileField.files[0]);
+
+            //     fetch('ファイルのアップロード処理のURL', {
+            //         method: 'PUT',
+            //         body: formData
+            //     })
+            //     .then(function(response) {
+            //         return response.json();
+            //     })
+            //     .catch(function(error) {
+            //         console.log('error: ' + error);
+            //     })
+            //     .then(function(response) {
+            //         console.log('success: ' + response);
+            //     });
+            // })();
+
+
+            // クロスオリジン --------------------------------
+            // 別ドメインに接続したい場合は"mode": "cors"とする
+            // なお、"mode": "same-origin"を設定すると同一オリジン以外の接続がエラーになる
+            // 'no-cors'にするとクロスオリジン接続ができない場合にエラーではなく、空のレスポンスが返る様になる
+            // fetch(url, {
+            //     mode: 'cors'
+            // })
+            // .then(function(response) {
+            //     console.log(response);
+            // });
+
+
+            // cookie --------------------------------
+            // 基本的にはcookieは含めない通信になっているので、cookieを送信したい場合には
+            // "credentials": "include"をつけないといけない
+            // fetch(url, {
+            //     credentials: 'include'
+            // })
+            // .then(function(response) {
+            //     console.log(response);
+            // });
+
+
+            // Service Workersでfetchを使う場合 --------------------------------
+            // pushイベントが動いたら
+            window.addEventListener('push', function(evt) {
+                var getEndpoint = window.registration.pushManager.getSubscription();
+                var confirmPush = getEndpoint.then(function(subScription) {
+                    var form = new FormData();
+                    form.append('endpoint', subScription.endPoint);
+                    return fetch(pushServiceUrl, {
+                        method: 'POST',
+                        body: form
+                    });
+                });
+                var getPushData = confirmPush.then(function(response) {
+                    return response.json();
+                });
+                var parseJSON = getPushData.then(function(json) {
+                    console.log(json.data);
+                });
+                evt.waitUntil(parseJSON); // これを用意しないといけない。そうじゃないとfetchの受信処理が終わらないままServiceWorkersが止まっちゃう
+            });
+        </script>
+    </body>
+</html>
